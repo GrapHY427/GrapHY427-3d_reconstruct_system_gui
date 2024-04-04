@@ -34,6 +34,9 @@ running = True
 
 # 应用变量
 selected_joystick = None
+
+state_code = display_lib.state_code
+
 camera_pitch = 0.0
 camera_yaw = 0.0
 y_axis = 0.0
@@ -43,20 +46,20 @@ camera_rotation = [0, 0, 0]  # Rotation of the camera in Euler angles (roll, cam
 # 游戏循环
 while running:
 
-    if state == 0:
+    if state == state_code['main_menu']:
         state, joystick = display_lib.render_main_menu(screen, background)
         if pygame.joystick.get_count() <= 0 and (state == 1 or state == 2):
-            state = 0
-    elif state == 1:
+            state = state_code['main_menu']
+    elif state == state_code['joystick_info_window']:
         state = display_lib.render_joystick_info_window(screen, background, joystick)
-    elif state == 2:
+    elif state == state_code['joystick_control_window']:
         state = display_lib.render_joystick_control_window(screen, background, joystick)
-    elif state == 3:
+    elif state == state_code['auto_control_window']:
         state = display_lib.render_auto_control_window(screen, background)
     else:
         pass
 
-    if state == -1:
+    if state == state_code['quit']:
         running = False
 
     # 刷新屏幕

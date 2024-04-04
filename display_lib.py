@@ -4,11 +4,15 @@ import serial.tools.list_ports
 
 import communicate_lib
 
+state_code = {'quit': -1, 'main_menu': 0, 'joystick_info_window': 1,
+              'joystick_control_window': 2, 'auto_control_window': 3}
+
 
 is_selecting_com_port = False
 selected_index = -1
 selected_port = None
 baud_rate = 600000
+time_out = 0.02
 
 selected_joystick = 0
 joystick = None
@@ -101,20 +105,20 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
     # 处理事件
     for event in pygame.event.get():
         if event.type == pygloc.QUIT:
-            return -1, joystick
+            return state_code['quit'], joystick
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 检查鼠标是否在按钮1上
             if button1.collidepoint(event.pos):
-                return 1, joystick
+                return state_code['joystick_info_window'], joystick
             # 检查鼠标是否在按钮2上
             if button2.collidepoint(event.pos):
-                return 2, joystick
+                return state_code['joystick_control_window'], joystick
             # 检查鼠标是否在按钮3上
             if button3.collidepoint(event.pos):
-                return 3, joystick
+                return state_code['auto_control_window'], joystick
             # 检查鼠标是否在按钮4上
             if button4.collidepoint(event.pos):
-                return -1, joystick
+                return state_code['quit'], joystick
             for i, button in enumerate(joystick_select_buttons):
                 if button.collidepoint(event.pos):
                     if i < pygame.joystick.get_count():
@@ -122,7 +126,7 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
                         joystick = pygame.joystick.Joystick(selected_joystick)
                         joystick.init()
     # 没有特殊事件，返回本窗口对应的state码
-    return 0, joystick
+    return state_code['main_menu'], joystick
 
 
 # 手柄信息监控窗口, state码: 1
@@ -173,13 +177,13 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
 
     for event in pygame.event.get():
         if event.type == pygloc.QUIT:
-            return -1
+            return state_code['quit']
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 检查鼠标是否在按钮上
             if button.collidepoint(event.pos):
-                return 0
+                return state_code['main_menu']
     # 没有特殊事件，返回本窗口对应的state码
-    return 1
+    return state_code['joystick_info_window']
 
 
 # 手柄控制窗口, state码: 2
@@ -250,7 +254,7 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
 
     # 初始化串口
     if selected_port is not None and serial_port is None:
-        serial_port = serial.Serial(selected_port.name, baud_rate)
+        serial_port = serial.Serial(selected_port.name, baud_rate, timeout=time_out)
         control_handle = communicate_lib.ControlHandle()
 
     if selected_port is not None and serial_port is not None:
@@ -268,6 +272,8 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
             else:
                 control_handle.get_joystick_signal(input_joystick)
                 control_handle.send_speed_control_command(serial_port)
+
+            control_handle.read_speed_control_report(serial_port, 2)
 
     # 串口选择界面
     if is_selecting_com_port:
@@ -339,7 +345,7 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
                                     control_handle = None
 
     # 没有特殊事件，返回本窗口对应的state码
-    return 2
+    return state_code['joystick_control_window']
 
 
 # 自动控制窗口, state码: 3
@@ -468,4 +474,4 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
                                     control_handle = None
 
     # 没有特殊事件，返回本窗口对应的state码
-    return 3
+    return state_code['auto_control_window']

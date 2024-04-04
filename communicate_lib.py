@@ -2,6 +2,8 @@ import pygame
 import serial
 import struct
 
+cdc_buffer_size = 64
+
 
 class ControlHandle:
 
@@ -11,6 +13,16 @@ class ControlHandle:
         self.pitch = 0
         self.yaw_pos = 0
         self.yaw_neg = 0
+        self.read_byte = None
+        self.receive_data = []
+        self.yaw_speed = 0
+        self.yaw_angle = 0
+        self.pitch_speed = 0
+        self.pitch_angle = 0
+        self.z_axis_position = 0
+        self.y_axis_position = 0
+        self.z_axis_speed = 0
+        self.y_axis_speed = 0
 
     def get_joystick_signal(self, input_joystick: pygame.joystick.Joystick):
         if input_joystick is None:
@@ -51,6 +63,23 @@ class ControlHandle:
 
             serial_instance.write(data_to_send)
             return
+
+    def read_speed_control_report(self, serial_instance: serial.Serial, state_code: int):
+        self.read_byte = serial_instance.read(cdc_buffer_size)
+        self.receive_data = []
+        for element in self.read_byte:
+            self.receive_data.append(element)
+        if len(self.receive_data) > 20:
+            if self.receive_data[0] == 0xA5 and self.receive_data[1] == 0x5A and self.receive_data[2] == 0x00:
+                if self.receive_data[3] == state_code:
+                    self.yaw_angle = self.receive_data[4] * 256 + self.receive_data[5]
+                    self.z_axis_position = self.receive_data[6] * 256 + self.receive_data[7]
+                    self.y_axis_position = self.receive_data[8] * 256 + self.receive_data[9]
+                    self.pitch_angle = self.receive_data[10] * 256 + self.receive_data[11]
+                    self.yaw_speed = self.receive_data[12] * 256 + self.receive_data[13]
+                    self.z_axis_speed = self.receive_data[14] * 256 + self.receive_data[15]
+                    self.y_axis_speed = self.receive_data[16] * 256 + self.receive_data[17]
+                    self.pitch_speed = self.receive_data[18] * 256 + self.receive_data[19]
 
 
 def send_play_music_command(serial_instance: serial.Serial):
