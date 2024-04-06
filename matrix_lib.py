@@ -11,9 +11,9 @@ def euler_to_rotation_matrix(roll, pitch, yaw):
     yaw = np.deg2rad(yaw)
 
     # Compute camera_rotation matrix around x-axis (roll)
-    R_x = np.array([[1, 0, 0],
-                    [0, np.cos(roll), -np.sin(roll)],
-                    [0, np.sin(roll), np.cos(roll)]])
+    R_x = np.array([[np.cos(roll), -np.sin(roll), 0],
+                    [np.sin(roll), np.cos(roll), 0],
+                    [0, 0, 1]])
 
     # Compute camera_rotation matrix around y-axis (camera_pitch)
     R_y = np.array([[np.cos(pitch), 0, -np.sin(pitch)],
@@ -21,9 +21,9 @@ def euler_to_rotation_matrix(roll, pitch, yaw):
                     [np.sin(pitch), 0, np.cos(pitch)]])
 
     # Compute camera_rotation matrix around z-axis (camera_yaw)
-    R_z = np.array([[np.cos(yaw), -np.sin(yaw), 0],
-                    [np.sin(yaw), np.cos(yaw), 0],
-                    [0, 0, 1]])
+    R_z = np.array([[1, 0, 0],
+                    [0, np.cos(yaw), -np.sin(yaw)],
+                    [0, np.sin(yaw), np.cos(yaw)]])
 
     # Combined camera_rotation matrix
     R = np.dot(R_z, np.dot(R_y, R_x))

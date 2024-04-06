@@ -1,10 +1,8 @@
 import pygame
 import pygame.locals as pygloc
 
-import numpy as np
 import serial
 import struct
-import time
 
 
 class ControlHandle:
