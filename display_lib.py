@@ -242,83 +242,37 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
         text_color = (0, 255, 0)
 
         # # 读取并显示每个电机的状态
-        if control_handle is not None:
+        draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
 
-            text = text_font.render(f"yaw speed: {control_handle.yaw_speed} rpm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"pitch speed: {control_handle.pitch_speed} rpm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"z_axis speed: {control_handle.z_axis_speed} rpm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"y_axis speed: {control_handle.y_axis_speed} rpm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"yaw angle: {int(control_handle.yaw_angle / 22.75)} degree", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"pitch angle: {int(control_handle.pitch_angle)} degree", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"z_axis position: {int(control_handle.z_axis_position)} mm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"y_axis position: {int(control_handle.y_axis_position)} mm", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-        else:
-
-            text = text_font.render(f"yaw speed: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"pitch speed: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"z_axis speed: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"y_axis speed: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"yaw angle: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"pitch angle: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"z_axis position: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-            text = text_font.render(f"y_axis position: None", True, text_color)
-            input_screen.blit(text, (width, height))
-            height += step
-
-    # 创建一个表示按钮的矩形
+    # 创建一个表示退出按钮的矩形
     quit_button = pygame.Rect(490, 590, 200, 80)
     select_com_button = pygame.Rect(900, 200, 180, 40)
+
+    # 创建一个表示归零按钮的矩形
+    y_axis_zero_button = pygame.Rect(940, 300, 180, 40)
+    z_axis_zero_button = pygame.Rect(940, 350, 180, 40)
+    pitch_zero_button = pygame.Rect(940, 400, 180, 40)
 
     # 绘制圆角矩形按钮
     pygame.draw.rect(input_screen, button_color, select_com_button, border_radius=10)
     text_font = pygame.font.Font(None, 28)
     text = text_font.render(f"Select COM Port", True, (0, 0, 0))
     input_screen.blit(text, (910, 210))
+
+    pygame.draw.rect(input_screen, button_color, y_axis_zero_button, border_radius=10)
+    text_font = pygame.font.Font(None, 28)
+    text = text_font.render(f"Zero Y Axis", True, (0, 0, 0))
+    input_screen.blit(text, (970, 310))
+
+    pygame.draw.rect(input_screen, button_color, z_axis_zero_button, border_radius=10)
+    text_font = pygame.font.Font(None, 28)
+    text = text_font.render(f"Zero Z Axis", True, (0, 0, 0))
+    input_screen.blit(text, (970, 360))
+
+    pygame.draw.rect(input_screen, button_color, pitch_zero_button, border_radius=10)
+    text_font = pygame.font.Font(None, 28)
+    text = text_font.render(f"Zero Pitch", True, (0, 0, 0))
+    input_screen.blit(text, (970, 410))
 
     pygame.draw.rect(input_screen, button_color, quit_button, border_radius=10)
     text_font = pygame.font.Font(None, 42)
@@ -343,21 +297,23 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
             input_screen.blit(text, (650, 300))
 
             draw_matrix(input_screen,
-                        matrix_lib.compute_camera_extrinsic_matrix(
-                            [control_handle.y_axis_position / 1000 * np.sin(np.deg2rad(control_handle.yaw_angle)),
-                             control_handle.y_axis_position / 1000 * np.cos(np.deg2rad(control_handle.yaw_angle)),
-                             control_handle.z_axis_position / 1000],
+                        matrix_lib.compute_transform_matrix(
+                            [(310 - control_handle.y_axis_position) / 1000 * np.sin(np.deg2rad(control_handle.yaw_angle)),
+                             (310 - control_handle.y_axis_position) / 1000 * np.cos(np.deg2rad(control_handle.yaw_angle)),
+                             (220 - control_handle.z_axis_position) / 1000],
                             [0, control_handle.pitch_angle, control_handle.yaw_angle]), (630, 330), (70, 35))
 
-            # # 发送控制数据到MCU
-            if input_joystick.get_button(0) == 1:
-                communicate_lib.send_play_music_command(serial_port)
-            else:
-                control_handle.get_joystick_signal(input_joystick)
+        # # 发送控制数据到MCU
+        if input_joystick.get_button(0) == 1:
+            pass
+        if input_joystick.get_button(3) == 1:
+            communicate_lib.send_play_music_command(serial_port)
+        else:
+            control_handle.get_joystick_signal(input_joystick)
 
-                control_handle.send_speed_control_command(serial_port)
+            control_handle.send_speed_control_command(serial_port)
 
-                control_handle.read_speed_control_report(serial_port, 0)
+            control_handle.read_speed_control_report(serial_port, 0)
 
     # 串口选择界面
     if is_selecting_com_port:
@@ -409,10 +365,19 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 检查鼠标是否在按钮上
             if quit_button.collidepoint(event.pos):
-                return 0
+                return state_code['main_menu']
             if select_com_button.collidepoint(event.pos):
                 is_selecting_com_port = not is_selecting_com_port
-                return 2
+                return state_code['joystick_control_window']
+            if y_axis_zero_button.collidepoint(event.pos):
+                if serial_port is not None:
+                    communicate_lib.send_zero_y_axis_command(serial_port)
+            if z_axis_zero_button.collidepoint(event.pos):
+                if serial_port is not None:
+                    communicate_lib.send_zero_z_axis_command(serial_port)
+            if pitch_zero_button.collidepoint(event.pos):
+                if serial_port is not None:
+                    communicate_lib.send_zero_pitch_command(serial_port)
             if is_selecting_com_port:
                 # 检查鼠标是否在某个listbox上
                 if listbox is not None:
@@ -475,75 +440,10 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
     width = 100
     height = 150
     step = 35
+    text_color = (0, 255, 0)
 
     # # 读取并显示每个电机的状态
-    if control_handle is not None:
-
-        text = text_font.render(f"yaw speed: {control_handle.yaw_speed} rpm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"pitch speed: {control_handle.pitch_speed} rpm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"z_axis speed: {control_handle.z_axis_speed} rpm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"y_axis speed: {control_handle.y_axis_speed} rpm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"yaw angle: {int(control_handle.yaw_angle / 22.75)} degree", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"pitch angle: {int(control_handle.pitch_angle)} degree", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"z_axis position: {int(control_handle.z_axis_position)} mm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"y_axis position: {int(control_handle.y_axis_position)} mm", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-    else:
-
-        text = text_font.render(f"yaw speed: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"pitch speed: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"z_axis speed: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"y_axis speed: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"yaw angle: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"pitch angle: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"z_axis position: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
-
-        text = text_font.render(f"y_axis position: None", True, (0, 255, 0))
-        input_screen.blit(text, (width, height))
-        height += step
+    draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
 
     # 初始化串口
     if selected_port is not None and serial_port is None:
@@ -563,7 +463,7 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
             input_screen.blit(text, (650, 300))
 
             draw_matrix(input_screen,
-                        matrix_lib.compute_camera_extrinsic_matrix(
+                        matrix_lib.compute_transform_matrix(
                             [control_handle.y_axis_position / 1000 * np.sin(np.deg2rad(control_handle.yaw_angle)),
                              control_handle.y_axis_position / 1000 * np.cos(np.deg2rad(control_handle.yaw_angle)),
                              control_handle.z_axis_position / 1000],
@@ -643,6 +543,80 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
 
     # 没有特殊事件，返回本窗口对应的state码
     return state_code['auto_control_window']
+
+
+# display motor information on the GUI screen
+def draw_motor_info(input_screen: pygame.Surface, text_font: pygame.font.Font, text_color: tuple,
+                    width_and_height: tuple, step: int, input_control_handle: communicate_lib.ControlHandle or None):
+    width, height = width_and_height
+
+    if input_control_handle is not None:
+
+        text = text_font.render(f"yaw speed: {input_control_handle.yaw_speed} rpm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"pitch speed: {input_control_handle.pitch_speed} rpm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"z_axis speed: {input_control_handle.z_axis_speed} rpm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"y_axis speed: {input_control_handle.y_axis_speed} rpm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"yaw angle: {int(input_control_handle.yaw_angle / 22.75)} degree", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"pitch angle: {int(input_control_handle.pitch_angle)} degree", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"z_axis position: {int(220 - input_control_handle.z_axis_position)} mm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"y_axis position: {int(310 - input_control_handle.y_axis_position)} mm", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+    else:
+
+        text = text_font.render(f"yaw speed: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"pitch speed: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"z_axis speed: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"y_axis speed: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"yaw angle: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"pitch angle: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"z_axis position: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
+
+        text = text_font.render(f"y_axis position: None", True, text_color)
+        input_screen.blit(text, (width, height))
+        height += step
 
 
 # 绘制矩阵的函数，包括单元格值

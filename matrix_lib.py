@@ -1,3 +1,6 @@
+import io
+import json
+
 import numpy as np
 
 
@@ -30,7 +33,7 @@ def euler_to_rotation_matrix(roll, pitch, yaw):
     return R
 
 
-def compute_camera_extrinsic_matrix(position, rotation):
+def compute_transform_matrix(position, rotation):
     """
     Compute the camera extrinsic matrix from camera_position and camera_rotation (Euler angles).
     """
@@ -50,3 +53,16 @@ def compute_camera_extrinsic_matrix(position, rotation):
     matrix[:3, 3] = t
 
     return matrix
+
+
+def add_transform_matrix_to_dictionary(filepath: str, rotation_deg: float, transform_matrix: np.ndarray, frames: list):
+    dictionary = {"file_path": filepath,
+                  "rotation": np.deg2rad(rotation_deg),
+                  "transform_matrix": transform_matrix.tolist()}
+    frames.append(dictionary)
+
+
+def save_json_file(filename: str, camera_angle_x: float, frames: list):
+    dictionary = {"camera_angle_x": camera_angle_x, "frames": frames}
+    with open(filename, "w+") as f:
+        json.dump(dictionary, f)

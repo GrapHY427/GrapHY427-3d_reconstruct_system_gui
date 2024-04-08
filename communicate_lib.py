@@ -83,6 +83,33 @@ class ControlHandle:
         self.read_byte = None
 
 
+def send_zero_y_axis_command(serial_instance: serial.Serial):
+    raw_data = [-23206, 2]
+    data_to_send = b''
+    for value in raw_data:
+        data_to_send += struct.pack('>h', value)  # 'h'表示short类型，>表示使用大端序
+    serial_instance.write(data_to_send)
+    return
+
+
+def send_zero_z_axis_command(serial_instance: serial.Serial):
+    raw_data = [-23206, 3]
+    data_to_send = b''
+    for value in raw_data:
+        data_to_send += struct.pack('>h', value)  # 'h'表示short类型，>表示使用大端序
+    serial_instance.write(data_to_send)
+    return
+
+
+def send_zero_pitch_command(serial_instance: serial.Serial):
+    raw_data = [-23206, 4]
+    data_to_send = b''
+    for value in raw_data:
+        data_to_send += struct.pack('>h', value)  # 'h'表示short类型，>表示使用大端序
+    serial_instance.write(data_to_send)
+    return
+
+
 def send_play_music_command(serial_instance: serial.Serial):
     raw_data = [-23206, 14]
     data_to_send = b''

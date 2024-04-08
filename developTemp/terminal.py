@@ -5,7 +5,7 @@ import json
 
 frames = []
 for angle in range(360):
-    transform_matrix: np.ndarray = matrix_lib.compute_camera_extrinsic_matrix([0, 0.5, 1], [0, 0, angle])
+    transform_matrix: np.ndarray = matrix_lib.compute_transform_matrix([0, 0.5, 1], [0, 0, angle])
     dictionary = {"file_path": "./data/r_" + str(int(angle)),
                   "rotation": np.deg2rad(angle),
                   "transform_matrix": transform_matrix.tolist()}
