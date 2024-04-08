@@ -298,8 +298,10 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
 
             draw_matrix(input_screen,
                         matrix_lib.compute_transform_matrix(
-                            [(310 - control_handle.y_axis_position) / 1000 * np.sin(np.deg2rad(control_handle.yaw_angle)),
-                             (310 - control_handle.y_axis_position) / 1000 * np.cos(np.deg2rad(control_handle.yaw_angle)),
+                            [(310 - control_handle.y_axis_position) / 1000 *
+                             np.sin(np.deg2rad(control_handle.yaw_angle)),
+                             (310 - control_handle.y_axis_position) / 1000 *
+                             np.cos(np.deg2rad(control_handle.yaw_angle)),
                              (220 - control_handle.z_axis_position) / 1000],
                             [0, control_handle.pitch_angle, control_handle.yaw_angle]), (630, 330), (70, 35))
 
@@ -576,11 +578,13 @@ def draw_motor_info(input_screen: pygame.Surface, text_font: pygame.font.Font, t
         input_screen.blit(text, (width, height))
         height += step
 
-        text = text_font.render(f"z_axis position: {int(220 - input_control_handle.z_axis_position)} mm", True, text_color)
+        text = text_font.render(f"z_axis position: {int(220 - input_control_handle.z_axis_position)} mm",
+                                True, text_color)
         input_screen.blit(text, (width, height))
         height += step
 
-        text = text_font.render(f"y_axis position: {int(310 - input_control_handle.y_axis_position)} mm", True, text_color)
+        text = text_font.render(f"y_axis position: {int(310 - input_control_handle.y_axis_position)} mm",
+                                True, text_color)
         input_screen.blit(text, (width, height))
         height += step
 
