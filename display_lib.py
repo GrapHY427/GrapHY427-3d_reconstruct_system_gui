@@ -464,12 +464,13 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
             text = text_font.render("Transform Matrix", True, (128, 0, 255))
             input_screen.blit(text, (650, 300))
 
-            draw_matrix(input_screen,
-                        matrix_lib.compute_transform_matrix(
+            transform_matrix = matrix_lib.compute_transform_matrix(
                             [control_handle.y_axis_position / 1000 * np.sin(np.deg2rad(control_handle.yaw_angle)),
                              control_handle.y_axis_position / 1000 * np.cos(np.deg2rad(control_handle.yaw_angle)),
                              control_handle.z_axis_position / 1000],
-                            [0, control_handle.pitch_angle, control_handle.yaw_angle]), (630, 330), (70, 35))
+                            [0, control_handle.pitch_angle, control_handle.yaw_angle])
+
+            draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
 
             # # 发送控制数据到MCU
             control_handle.send_speed_control_command(serial_port)
