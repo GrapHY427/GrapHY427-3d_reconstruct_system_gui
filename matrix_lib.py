@@ -1,67 +1,40 @@
-import json
-
 import numpy as np
 
 
-def euler_to_rotation_matrix(roll, pitch, yaw):
+def euler_to_rotation_matrix(euler_angles):
     """
-    Convert Euler angles (in degrees) to a camera_rotation matrix.
+    将欧拉角转换为旋转矩阵
+    :param euler_angles: 相机的欧拉角（yaw, pitch, roll）
+    :return: 3x3 旋转矩阵
     """
-    # Convert angles to radians
-    roll = np.deg2rad(roll)
-    pitch = np.deg2rad(pitch)
+    yaw, pitch, roll = euler_angles
     yaw = np.deg2rad(yaw)
-
-    # Compute camera_rotation matrix around x-axis (roll)
-    R_x = np.array([[np.cos(roll), -np.sin(roll), 0],
-                    [np.sin(roll), np.cos(roll), 0],
-                    [0, 0, 1]])
-
-    # Compute camera_rotation matrix around y-axis (camera_pitch)
-    R_y = np.array([[np.cos(pitch), 0, -np.sin(pitch)],
+    pitch = np.deg2rad(pitch)
+    roll = np.deg2rad(roll)
+    # 计算旋转矩阵
+    R_x = np.array([[1, 0, 0],
+                    [0, np.cos(roll), -np.sin(roll)],
+                    [0, np.sin(roll), np.cos(roll)]])
+    R_y = np.array([[np.cos(pitch), 0, np.sin(pitch)],
                     [0, 1, 0],
-                    [np.sin(pitch), 0, np.cos(pitch)]])
-
-    # Compute camera_rotation matrix around z-axis (camera_yaw)
-    R_z = np.array([[1, 0, 0],
-                    [0, np.cos(yaw), -np.sin(yaw)],
-                    [0, np.sin(yaw), np.cos(yaw)]])
-
-    # Combined camera_rotation matrix
-    R = np.dot(R_z, np.dot(R_y, R_x))
-    return R
+                    [-np.sin(pitch), 0, np.cos(pitch)]])
+    R_z = np.array([[np.cos(yaw), -np.sin(yaw), 0],
+                    [np.sin(yaw), np.cos(yaw), 0],
+                    [0, 0, 1]])
+    rotation_matrix = R_x @ R_y @ R_z
+    return rotation_matrix
 
 
-def compute_transform_matrix(position, rotation):
+def compute_transform_matrix(position, euler_angles):
     """
-    Compute the camera extrinsic matrix from camera_position and camera_rotation (Euler angles).
+    计算相机的外参矩阵
+    :param position: 相机在世界坐标系中的位置（x, y, z）
+    :param euler_angles: 相机的欧拉角（yaw, pitch, roll）
+    :return: 4x4 外参矩阵
     """
-    # Extract camera_position and camera_rotation
-    x, y, z = position
-    roll, pitch, yaw = rotation
+    rotation_matrix = euler_to_rotation_matrix(euler_angles)
+    translation_vector = np.array(position).reshape(3, 1)
+    extrinsic_matrix = np.hstack((rotation_matrix, translation_vector))
+    extrinsic_matrix = np.vstack((extrinsic_matrix, [0, 0, 0, 1]))
+    return np.linalg.inv(extrinsic_matrix)
 
-    # Compute camera_rotation matrix from Euler angles
-    R = euler_to_rotation_matrix(roll, pitch, yaw)
-
-    # Translation vector
-    t = np.array([x, y, z])
-
-    # Construct the extrinsic matrix
-    matrix = np.eye(4)
-    matrix[:3, :3] = R
-    matrix[:3, 3] = t
-
-    return matrix
-
-
-def add_transform_matrix_to_dictionary(filepath: str, rotation_deg: float, transform_matrix: np.ndarray, frames: list):
-    dictionary = {"file_path": filepath,
-                  "rotation": np.deg2rad(rotation_deg),
-                  "transform_matrix": transform_matrix.tolist()}
-    frames.append(dictionary)
-
-
-def save_json_file(filename: str, camera_angle_x: float, frames: list):
-    dictionary = {"camera_angle_x": camera_angle_x, "frames": frames}
-    with open(filename, "w+") as f:
-        json.dump(dictionary, f)
