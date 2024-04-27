@@ -37,7 +37,7 @@ num_frames = 0
 json_name = './dataset/transform.json'
 photo_dir = './dataset/photo/photo_'
 dataset_dir = './photo/photo_'
-camera_angle_x = 0.6911112070083618
+camera_angle_x = 1.396
 
 device_id = 0
 camera = cv2.VideoCapture(device_id, cv2.CAP_DSHOW)
@@ -275,14 +275,14 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
         text = text_font.render(f"Axis {i}: {axis:d}", True, (0, 255, 255))
         input_screen.blit(text, (100, i * 50 + 200))
 
-        # 方便修改窗口位置相关参数
-        width = 300
-        height = 200
-        step = 30
-        text_color = (0, 255, 0)
+    # 方便修改窗口位置相关参数
+    width = 300
+    height = 200
+    step = 30
+    text_color = (0, 255, 0)
 
-        # # 读取并显示每个电机的状态
-        display_lib.draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
+    # # 读取并显示每个电机的状态
+    display_lib.draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
 
     # 创建一个表示退出按钮的矩形
     quit_button = pygame.Rect(490, 590, 200, 80)
@@ -356,15 +356,14 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
 
             transform_matrix = matrix_lib.compute_transform_matrix(
                 [0,
-                 -1,
-                 -2],   # control_handle.z_axis_position / 220
-                [90, control_handle.pitch_angle, control_handle.yaw_angle])   # control_handle.yaw_angle
+                 ((220 - control_handle.z_axis_position) / 220),
+                 (510 - control_handle.y_axis_position) / 510],   # control_handle.z_axis_position / 220
+                [0, control_handle.pitch_angle, control_handle.yaw_angle / 22.76])   # control_handle.yaw_angle
 
             display_lib.draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
 
         state, photo = camera.read()
         cv2.imshow('camera', photo)
-        cv2.waitKey(1)
 
         # # 发送控制数据到MCU
         if (input_joystick.get_button(0) == 0) and (previous_button_state[0] == 1):
@@ -601,7 +600,6 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
 
         state, photo = camera.read()
         cv2.imshow('camera', photo)
-        cv2.waitKey(1)
 
         # # 发送控制数据到MCU
         if control_handle is not None:

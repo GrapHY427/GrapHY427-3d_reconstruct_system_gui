@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 
@@ -32,9 +34,42 @@ def compute_transform_matrix(position, euler_angles):
     :param euler_angles: 相机的欧拉角（yaw, pitch, roll）
     :return: 4x4 外参矩阵
     """
-    rotation_matrix = euler_to_rotation_matrix(euler_angles)
-    translation_vector = np.array(position).reshape(3, 1)
-    extrinsic_matrix = np.hstack((rotation_matrix, translation_vector))
-    extrinsic_matrix = np.vstack((extrinsic_matrix, [0, 0, 0, 1]))
-    return np.linalg.inv(extrinsic_matrix)
+    # rotation_matrix = euler_to_rotation_matrix(euler_angles)
+    # translation_vector = np.array(position).reshape(3, 1)
+    # extrinsic_matrix = np.hstack((rotation_matrix, translation_vector))
+    # extrinsic_matrix = np.vstack((extrinsic_matrix, [0, 0, 0, 1]))
+    x, y, z = position
+    roll, pitch, yaw = euler_angles
+    pitch = np.deg2rad(pitch)
+    yaw = np.deg2rad(yaw)
+    return pose_spherical(yaw, pitch, 2.5 * math.hypot(y, z))
 
+
+trans_t = lambda t: np.array([
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, t],
+    [0, 0, 0, 1]])
+
+rot_phi = lambda phi: np.array([
+    [1, 0, 0, 0],
+    [0, np.cos(phi), -np.sin(phi), 0],
+    [0, np.sin(phi), np.cos(phi), 0],
+    [0, 0, 0, 1]])
+
+rot_theta = lambda theta: np.array([
+    [np.cos(theta), 0, -np.sin(theta), 0],
+    [0, 1, 0, 0],
+    [np.sin(theta), 0, np.cos(theta), 0],
+    [0, 0, 0, 1]])
+
+
+def pose_spherical(theta, phi, radius):
+    c2w = trans_t(radius)
+    c2w = rot_phi(phi) @ c2w
+    c2w = rot_theta(theta) @ c2w
+    c2w = np.array([[-1, 0, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 0, 1]]) @ c2w
+    return c2w
