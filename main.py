@@ -439,6 +439,12 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 检查鼠标是否在按钮上
             if quit_button.collidepoint(event.pos):
+                selected_index = -1
+                if serial_port is not None:
+                    serial_port.close()
+                    serial_port = None
+                    selected_port = None
+                    control_handle = None
                 return state_code['main_menu']
             if select_com_button.collidepoint(event.pos):
                 is_selecting_com_port = not is_selecting_com_port

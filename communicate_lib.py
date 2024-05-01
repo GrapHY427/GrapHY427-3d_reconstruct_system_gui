@@ -55,7 +55,7 @@ class ControlHandle:
             print("No serial port available!")
             return
         else:
-            raw_data = [-23206, 0, self.z_axis, self.y_axis, self.pitch, self.yaw_pos, self.yaw_neg]
+            raw_data = [-23206, 1, self.z_axis, self.y_axis, self.pitch, self.yaw_pos, self.yaw_neg]
 
             data_to_send = b''
             for value in raw_data:
@@ -81,6 +81,21 @@ class ControlHandle:
                     self.z_axis_speed = check_int16_overflow(self.receive_data[16] * 256 + self.receive_data[17])
                     self.pitch_speed = check_int16_overflow(self.receive_data[18] * 256 + self.receive_data[19])
         self.read_byte = None
+
+    def zero_control_handle_data(self):
+        self.z_axis = 0
+        self.y_axis = 0
+        self.pitch = 0
+        self.yaw_pos = 0
+        self.yaw_neg = 0
+        self.yaw_speed = 0
+        self.yaw_angle = 0
+        self.pitch_speed = 0
+        self.pitch_angle = 0
+        self.z_axis_position = 0
+        self.y_axis_position = 0
+        self.z_axis_speed = 0
+        self.y_axis_speed = 0
 
 
 def send_zero_y_axis_command(serial_instance: serial.Serial):
