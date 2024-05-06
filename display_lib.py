@@ -82,11 +82,8 @@ class Button:
     mouse_button_down_callback = None
     mouse_button_up_callback = None
 
-    def __init__(self):
-        pass
-
-    def set_attribute(self, left_top: tuple, width_height: tuple, color: tuple, text: str, text_size: int,
-                      text_color: tuple, text_horizon_offset: int, border_radius: int = 0):
+    def __init__(self, left_top: tuple, width_height: tuple, color: tuple, text: str, text_size: int,
+                 text_color: tuple, text_horizon_offset: int, border_radius: int = 0):
         self.left_top = left_top
         self.width_height = width_height
         self.button_rect = pygame.Rect(self.left_top, self.width_height)
