@@ -127,7 +127,7 @@ camera_rotation = [0, 0, 0]  # Rotation of the camera in Euler angles (roll, cam
 
 confirm_button = display_lib.Button()
 confirm_button.set_attribute((200, 200), (150, 50), (255, 255, 0), 'button', 36, (0, 0, 0), 33, 10)
-confirm_button.mouse_motion = mouse_on_event
+confirm_button.mouse_motion_callback = mouse_on_event
 
 # 游戏循环
 while running:
@@ -136,7 +136,7 @@ while running:
         if event.type == pygloc.QUIT:
             running = False
         if event.type == pygame.MOUSEMOTION:
-            confirm_button.mouse_motion(confirm_button, event)
+            confirm_button.mouse_motion_callback(confirm_button, event)
 
     # 填充背景
     screen.fill((0, 0, 0))
