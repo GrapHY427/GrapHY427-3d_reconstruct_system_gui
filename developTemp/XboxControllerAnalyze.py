@@ -3,6 +3,7 @@ import pygame.locals as pygloc
 
 import numpy as np
 # import serial
+import display_lib
 
 
 def euler_to_rotation_matrix(roll, pitch, yaw):
@@ -77,6 +78,13 @@ def draw_matrix(surface, matrix, start_pos, cell_size):
             surface.blit(text_surf, text_rect)
 
 
+def mouse_on_event(button: display_lib.Button, input_event: pygame.event.Event):
+    if button.button_rect.collidepoint(input_event.pos):
+        button.color = (255, 0, 0)
+    else:
+        button.color = (255, 255, 0)
+
+
 # Example usage
 
 # 初始化pygame
@@ -117,12 +125,18 @@ z_axis = 0.0
 camera_position = [0, 0, 1]  # Position of the camera in world coordinates
 camera_rotation = [0, 0, 0]  # Rotation of the camera in Euler angles (roll, camera_pitch, camera_yaw)
 
+confirm_button = display_lib.Button()
+confirm_button.set_attribute((200, 200), (150, 50), (255, 255, 0), 'button', 36, (0, 0, 0), 33, 10)
+confirm_button.mouse_motion = mouse_on_event
+
 # 游戏循环
 while running:
     # 处理事件
     for event in pygame.event.get():
         if event.type == pygloc.QUIT:
             running = False
+        if event.type == pygame.MOUSEMOTION:
+            confirm_button.mouse_motion(confirm_button, event)
 
     # 填充背景
     screen.fill((0, 0, 0))
@@ -170,6 +184,8 @@ while running:
     draw_matrix(screen, np.array([camera_position]), (400, 0), (100, 50))
     draw_matrix(screen, np.array([camera_rotation]), (400, 100), (100, 50))
     draw_matrix(screen, extrinsic_matrix, (400, 250), (100, 50))
+
+    confirm_button.render(screen)
 
     # 刷新屏幕
     pygame.display.flip()

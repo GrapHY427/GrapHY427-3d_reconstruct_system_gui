@@ -100,3 +100,62 @@ def draw_matrix(surface, matrix, start_pos, cell_size):
             text_rect = text_surf.get_rect(center=rect.center)
             # 将文本绘制到屏幕上
             surface.blit(text_surf, text_rect)
+
+
+class Button:
+    left_top = (100, 100)
+    width_height = (30, 20)
+    button_rect = None
+    color = (128, 128, 128)
+    text = 'Button'
+    text_font = None
+    text_height = 13.278
+    text_color = (0, 0, 0)
+    text_horizon_offset = 0
+    border_radius = 0
+
+    # callback function
+    mouse_motion = None
+    mouse_button_down_callback = None
+    mouse_button_up_callback = None
+
+    def __init__(self):
+        pass
+
+    def set_attribute(self, left_top: tuple, width_height: tuple, color: tuple, text: str, text_size: int,
+                      text_color: tuple, text_horizon_offset: int, border_radius: int = 0):
+        self.left_top = left_top
+        self.width_height = width_height
+        self.button_rect = pygame.Rect(self.left_top, self.width_height)
+        self.color = color
+        self.text = text
+        self.text_font = pygame.font.Font(None, text_size)
+        self.text_height = text_size   # round(1.3278 * text_size)
+        self.text_color = text_color
+        self.text_horizon_offset = text_horizon_offset
+        self.border_radius = border_radius
+
+    def render(self, input_screen: pygame.surface.Surface):
+        pygame.draw.rect(input_screen, self.color, self.button_rect, border_radius=self.border_radius)
+        text = self.text_font.render(self.text, True, self.text_color)
+        input_screen.blit(text, (self.left_top[0] + self.text_horizon_offset,
+                                 self.left_top[1] + (self.width_height[1] - self.text_height)))
+
+    def register_event_function(self, event: int, callback_function: staticmethod):
+        if event == pygame.MOUSEMOTION:
+            self.mouse_motion = callback_function
+        elif event == pygame.MOUSEBUTTONDOWN:
+            self.mouse_button_down_callback = callback_function
+        elif event == pygame.MOUSEBUTTONUP:
+            self.mouse_button_up_callback = callback_function
+
+    def event_service(self, event: pygame.event.Event):
+        if event.type == pygame.MOUSEMOTION:
+            if self.button_rect.collidepoint(event.pos):
+                self.mouse_motion()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.mouse_button_down_callback()
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if self.button_rect.collidepoint(event.pos):
+                self.mouse_button_up_callback()
