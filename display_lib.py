@@ -155,3 +155,14 @@ class PackedText:
     def render(self, input_screen: pygame.surface.Surface):
         rendered_text = self.font.render(self.text, True, self.color)
         input_screen.blit(rendered_text, self.left_top)
+
+
+class ListBox:
+    def __init__(self):
+        pass
+
+    def set_choice(self):
+        pass
+
+    def render(self, input_screen: pygame.surface.Surface):
+        pass
