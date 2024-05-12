@@ -89,6 +89,8 @@ class Button:
         self.button_rect = pygame.Rect(self.left_top, self.width_height)
         self.color = color
         self.ordinary_color = color
+        self.mouse_on_color = self.ordinary_color
+        self.mouse_down_color = self.ordinary_color
         self.text = text
         self.text_size = text_size
         self.text_font = pygame.font.Font(None, text_size)
@@ -104,6 +106,9 @@ class Button:
 
     def set_mouse_on_color(self, mouse_on_color: tuple):
         self.mouse_on_color = mouse_on_color
+
+    def set_mouse_down_color(self, mouse_down_color: tuple):
+        self.mouse_down_color = mouse_down_color
 
     def render(self, input_screen: pygame.surface.Surface):
         pygame.draw.rect(input_screen, self.color, self.button_rect, border_radius=self.border_radius)
@@ -126,7 +131,7 @@ class Button:
             self.mouse_button_down_callback(self, event)
         elif event.type == pygame.MOUSEBUTTONUP:
             pass
-            # self.mouse_button_up_callback(self, event)
+            self.mouse_button_up_callback(self, event)
         else:
             pass
 
@@ -175,6 +180,7 @@ class ListBox:
         self.text_vertical_offset = (self.width_height[1] - self.text_height) / 2
         self.candidate_list = candidate_list
         self.selected_index = -1
+        self.previous_selected_index = -1
         self.listbox_hint = listbox_hint
         self.no_candidate_text = no_candidate_hint
 
@@ -182,8 +188,12 @@ class ListBox:
         self.listbox_selected_callback = None
         self.listbox_cancel_selected_callback = None
         self.listbox_auto_select_callback = None
+        self.mouse_motion_callback = None
+        self.mouse_button_down_callback = None
+        self.mouse_button_up_callback = None
 
     def set_selected_index(self, selected_index: int):
+        self.previous_selected_index = self.selected_index
         self.selected_index = selected_index
 
     def cancel_selected_index(self):
@@ -193,7 +203,12 @@ class ListBox:
         self.candidate_list = candidate_list
 
     def process_event(self, input_event: pygame.event.Event):
-        pass
+        if input_event.type == pygame.MOUSEMOTION:
+            self.mouse_motion_callback(self, input_event)
+        elif input_event.type == pygame.MOUSEBUTTONDOWN:
+            self.mouse_button_down_callback(self, input_event)
+        elif input_event.type == pygame.MOUSEBUTTONUP:
+            self.mouse_button_up_callback(self, input_event)
 
     def render(self, input_screen: pygame.surface.Surface):
         text_font = pygame.font.Font(None, self.text_size)

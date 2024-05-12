@@ -10,7 +10,7 @@ import io_lib
 
 # 应用变量
 joystick_index = -1
-joystick = None
+joystick: pygame.joystick.Joystick = None
 
 state_code = {'quit': -1, 'main_menu': 0, 'joystick_info_window': 1,
               'joystick_control_window': 2, 'auto_control_window': 3}
@@ -52,6 +52,7 @@ camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)  # 高度
 def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.surface.Surface):
     global joystick
     global joystick_index
+    global current_state_code
 
     button_list = []
 
@@ -83,16 +84,25 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
     select_joystick_hint = display_lib.PackedText(
         'Select a joystick, if no joystick connected, some function will be disabled', 32, (255, 255, 255), (250, 560))
 
+    for button in joystick_select_buttons:
+        button.mouse_button_up_callback = do_nothing
+        button_list.append(button)
+
+    button1.mouse_button_up_callback = joystick_info_button_mouse_up_event_handler
+    button2.mouse_button_up_callback = joystick_control_button_mouse_up_event_handler
+    button3.mouse_button_up_callback = auto_control_button_mouse_up_event_handler
+    button4.mouse_button_up_callback = quit_button_mouse_up_event_handler
+
     button_list.append(button1)
     button_list.append(button2)
     button_list.append(button3)
     button_list.append(button4)
-    for button in joystick_select_buttons:
-        button_list.append(button)
 
     for button in button_list:
         button.set_mouse_on_color((0, 255, 255))
+        button.set_mouse_down_color((0, 0, 255))
         button.mouse_motion_callback = mouse_on_event_handler
+        button.mouse_button_down_callback = mouse_down_event_handler
 
     # 运行过程
     while True:
@@ -139,23 +149,18 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
         # 处理事件
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
-                return state_code['quit'], joystick
+                current_state_code = state_code['quit']
             if event.type == pygame.MOUSEMOTION:
                 for button in button_list:
                     button.mouse_motion_callback(button, event)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # 检查鼠标是否在按钮1上
-                if button1.button_rect.collidepoint(event.pos) and pygame.joystick.get_count() > 0:
-                    return state_code['joystick_info_window'], joystick
-                # 检查鼠标是否在按钮2上
-                elif button2.button_rect.collidepoint(event.pos) and pygame.joystick.get_count() > 0:
-                    return state_code['joystick_control_window'], joystick
-                # 检查鼠标是否在按钮3上
-                elif button3.button_rect.collidepoint(event.pos):
-                    return state_code['auto_control_window'], joystick
-                # 检查鼠标是否在按钮4上
-                elif button4.button_rect.collidepoint(event.pos):
-                    return state_code['quit'], joystick
+                # 检查鼠标是否在按钮上
+                for button in button_list:
+                    button.mouse_button_down_callback(button, event)
+            if event.type == pygame.MOUSEBUTTONUP:
+                # 检查鼠标是否在按钮上
+                for button in button_list:
+                    button.mouse_button_up_callback(button, event)
                 for i, button in enumerate(joystick_select_buttons):
                     if button.button_rect.collidepoint(event.pos):
                         if i < pygame.joystick.get_count():
@@ -177,24 +182,27 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
         # 控制更新速率
         pygame.time.Clock().tick(60)
 
+        if current_state_code != state_code['main_menu']:
+            return
+
 
 # 手柄信息监控窗口, state码: 1
-def render_joystick_info_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface,
-                                input_joystick: pygame.joystick.Joystick):
+def render_joystick_info_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface):
     global current_state_code
+    global joystick
 
     # 注册标题
     title = display_lib.PackedText('Joystick Monitor', 60, (255, 255, 255), (450, 40))
 
     axis_text_list = []
     # # # 读取并显示每个轴的状态
-    num_axes = input_joystick.get_numaxes()
+    num_axes = joystick.get_numaxes()
     for i in range(num_axes):
         axis_text_list.append(display_lib.PackedText(f'Axis {i}: 0', 48, (0, 255, 255), (200, i * 90 + 100)))
 
     button_text_list = []
     # # 读取并显示每个按钮的状态
-    num_buttons = input_joystick.get_numbuttons()
+    num_buttons = joystick.get_numbuttons()
     for i in range(num_buttons):
         button_text_list.append(display_lib.PackedText(f'Button {i}', 48, (0, 255, 0), (850, i * 36 + 100)))
 
@@ -204,22 +212,25 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
     # 创建一个按钮
     button = display_lib.Button((490, 590), (200, 80), button_color, 'Main Menu', 42, (0, 0, 0), 25, 10)
     button.set_mouse_on_color((0, 255, 255))
+    button.set_mouse_down_color((0, 0, 255))
     button.mouse_motion_callback = mouse_on_event_handler
+    button.mouse_button_down_callback = mouse_down_event_handler
+    button.mouse_button_up_callback = main_menu_button_mouse_up_event_handler
 
     while True:
         # 处理事件
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
                 current_state_code = state_code['quit']
-            if event.type == pygame.MOUSEMOTION:
+            elif event.type == pygame.MOUSEMOTION:
                 button.mouse_motion_callback(button, event)
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # 检查鼠标是否在按钮上
-                if button.button_rect.collidepoint(event.pos):
-                    current_state_code = state_code['main_menu']
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                button.mouse_button_down_callback(button, event)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                button.mouse_button_up_callback(button, event)
 
         for i, axis_text in enumerate(axis_text_list):
-            axis = input_joystick.get_axis(i)
+            axis = joystick.get_axis(i)
             if i < 4:
                 axis = int(axis * 64)
             else:
@@ -227,7 +238,7 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
             axis_text.set_text(f'Axis {i}: {axis:d}')
 
         for i, button_text in enumerate(button_text_list):
-            value = input_joystick.get_button(i)
+            value = joystick.get_button(i)
             if value == 0:
                 button_text.set_color((0, 255, 0))
             else:
@@ -255,10 +266,10 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
 
 
 # 手柄控制窗口, state码: 2
-def render_joystick_control_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface,
-                                   input_joystick: pygame.joystick.Joystick):
-
+def render_joystick_control_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface):
     global current_state_code
+
+    global joystick
 
     global selected_index
     global is_selecting_com_port
@@ -284,7 +295,7 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
     # 读取并显示每个轴的状态
     axis_text_list = []
     # # # 读取并显示每个轴的状态
-    num_axes = input_joystick.get_numaxes()
+    num_axes = joystick.get_numaxes()
     for i in range(num_axes):
         axis_text_list.append(display_lib.PackedText(f'Axis {i}: 0', 36, (0, 255, 255), (100, i * 50 + 200)))
 
@@ -345,17 +356,19 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
     button_list[6] = save_frame_button
 
     # 注册回调函数
-    quit_button.mouse_button_down_callback = quit_button_mouse_button_down_event_handler
-    select_com_button.mouse_button_down_callback = select_com_button_mouse_button_down_event_handler
-    y_axis_zero_button.mouse_button_down_callback = y_axis_zero_button_mouse_button_down_event_handler
-    z_axis_zero_button.mouse_button_down_callback = z_axis_zero_button_mouse_button_down_event_handler
-    pitch_zero_button.mouse_button_down_callback = pitch_zero_button_mouse_button_down_event_handler
-    reset_frame_button.mouse_button_down_callback = reset_frame_button_mouse_button_down_event_handler
-    save_frame_button.mouse_button_down_callback = save_frame_button_mouse_button_down_event_handler
+    quit_button.mouse_button_up_callback = main_menu_button_mouse_up_event_handler
+    select_com_button.mouse_button_up_callback = select_com_button_mouse_button_up_event_handler
+    y_axis_zero_button.mouse_button_up_callback = y_axis_zero_button_mouse_button_up_event_handler
+    z_axis_zero_button.mouse_button_up_callback = z_axis_zero_button_mouse_button_up_event_handler
+    pitch_zero_button.mouse_button_up_callback = pitch_zero_button_mouse_button_up_event_handler
+    reset_frame_button.mouse_button_up_callback = reset_frame_button_mouse_button_up_event_handler
+    save_frame_button.mouse_button_up_callback = save_frame_button_mouse_button_up_event_handler
 
     for button in button_list:
         button.mouse_motion_callback = mouse_on_event_handler
+        button.mouse_button_down_callback = mouse_down_event_handler
         button.mouse_on_color = (0, 255, 255)
+        button.mouse_down_color = (0, 0, 255)
 
     # 运行循环
     while True:
@@ -417,7 +430,7 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
             cv2.imshow('camera', photo)
 
             # # 发送控制数据到MCU
-            if (input_joystick.get_button(0) == 0) and (previous_button_state[0] == 1):
+            if (joystick.get_button(0) == 0) and (previous_button_state[0] == 1):
                 if control_handle is not None:
                     io_lib.add_transform_matrix_to_frame(
                         dataset_dir + str(num_frames) + '.png', 0, transform_matrix, frames)
@@ -427,14 +440,14 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
                     else:
                         io_lib.remove_last_transform_matrix_to_frame(frames)
 
-            elif (input_joystick.get_button(3) == 0) and (previous_button_state[3] == 1):
+            elif (joystick.get_button(3) == 0) and (previous_button_state[3] == 1):
                 communicate_lib.send_play_music_command(serial_port)
 
             for index in range(len(previous_button_state)):
-                previous_button_state[index] = input_joystick.get_button(index)
+                previous_button_state[index] = joystick.get_button(index)
 
             if control_handle is not None:
-                control_handle.get_joystick_signal(input_joystick)
+                control_handle.get_joystick_signal(joystick)
 
                 control_handle.send_speed_control_command(serial_port)
 
@@ -486,7 +499,7 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
 
         # 读取手柄摇杆值
         for i, axis_text in enumerate(axis_text_list):
-            axis = input_joystick.get_axis(i)
+            axis = joystick.get_axis(i)
             if i < 4:
                 axis = int(axis * 64)
             else:
@@ -549,23 +562,28 @@ def main_loop():
     while running:
 
         if current_state_code == state_code['main_menu']:
-            current_state_code, joystick = render_main_menu(screen, background)
-            if pygame.joystick.get_count() <= 0 and (current_state_code == 1 or current_state_code == 2):
+            render_main_menu(screen, background)
+            if pygame.joystick.get_count() <= 0 and (current_state_code == state_code['joystick_info_window'] or
+                                                     current_state_code == state_code['joystick_control_window']):
                 current_state_code = state_code['main_menu']
         elif current_state_code == state_code['joystick_info_window']:
-            render_joystick_info_window(screen, background, joystick)
+            render_joystick_info_window(screen, background)
         elif current_state_code == state_code['joystick_control_window']:
-            render_joystick_control_window(screen, background, joystick)
+            render_joystick_control_window(screen, background)
         elif current_state_code == state_code['auto_control_window']:
             render_auto_control_window(screen, background)
         else:
             pass
-
         if current_state_code == state_code['quit']:
             running = False
 
     # 退出pygame
     pygame.quit()
+
+
+def do_nothing(input_button: display_lib.Button, input_event: pygame.event.Event):
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.ordinary_color
 
 
 def mouse_on_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
@@ -575,7 +593,46 @@ def mouse_on_event_handler(input_button: display_lib.Button, input_event: pygame
         input_button.color = input_button.ordinary_color
 
 
-def quit_button_mouse_button_down_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+def mouse_down_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_down_color
+    else:
+        input_button.color = input_button.ordinary_color
+
+
+def joystick_info_button_mouse_up_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+    global current_state_code
+
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
+        current_state_code = state_code['joystick_info_window']
+
+
+def joystick_control_button_mouse_up_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+    global current_state_code
+
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
+        current_state_code = state_code['joystick_control_window']
+
+
+def auto_control_button_mouse_up_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+    global current_state_code
+
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
+        current_state_code = state_code['auto_control_window']
+
+
+def quit_button_mouse_up_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
+    global current_state_code
+
+    if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
+        current_state_code = state_code['quit']
+
+
+def main_menu_button_mouse_up_event_handler(input_button: display_lib.Button, input_event: pygame.event.Event):
     global selected_index
     global serial_port
     global selected_port
@@ -583,6 +640,7 @@ def quit_button_mouse_button_down_event_handler(input_button: display_lib.Button
     global current_state_code
 
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         selected_index = -1
         if serial_port is not None:
             serial_port.close()
@@ -592,51 +650,57 @@ def quit_button_mouse_button_down_event_handler(input_button: display_lib.Button
         current_state_code = state_code['main_menu']
 
 
-def select_com_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                      input_event: pygame.event.Event):
+def select_com_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                    input_event: pygame.event.Event):
     global is_selecting_com_port
 
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         is_selecting_com_port = not is_selecting_com_port
 
 
-def y_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                       input_event: pygame.event.Event):
+def y_axis_zero_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                     input_event: pygame.event.Event):
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         if serial_port is not None:
             communicate_lib.send_zero_y_axis_command(serial_port)
 
 
-def z_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                       input_event: pygame.event.Event):
+def z_axis_zero_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                     input_event: pygame.event.Event):
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         if serial_port is not None:
             communicate_lib.send_zero_z_axis_command(serial_port)
 
 
-def pitch_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                      input_event: pygame.event.Event):
+def pitch_zero_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                    input_event: pygame.event.Event):
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         if serial_port is not None:
             communicate_lib.send_zero_pitch_command(serial_port)
 
 
-def reset_frame_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                       input_event: pygame.event.Event):
+def reset_frame_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                     input_event: pygame.event.Event):
     global frames
     global num_frames
 
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         frames = []
         num_frames = 0
 
 
-def save_frame_button_mouse_button_down_event_handler(input_button: display_lib.Button,
-                                                      input_event: pygame.event.Event):
+def save_frame_button_mouse_button_up_event_handler(input_button: display_lib.Button,
+                                                    input_event: pygame.event.Event):
     global frames
     global num_frames
 
     if input_button.button_rect.collidepoint(input_event.pos):
+        input_button.color = input_button.mouse_on_color
         io_lib.save_json_file(json_name, camera_angle_x, frames)
         frames = []
         num_frames = 0
