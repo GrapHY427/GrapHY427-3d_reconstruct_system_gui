@@ -4,11 +4,10 @@ import communicate_lib
 
 
 # display motor information on the GUI screen
-def draw_motor_info(input_screen: pygame.Surface, text_font: pygame.font.Font, text_color: tuple,
+def draw_motor_info(input_screen: pygame.Surface, text_size: int, text_color: tuple,
                     width_height: tuple, step: int, input_control_handle: communicate_lib.ControlHandle or None):
-    width, height = width_height
 
-    sentence_list = []
+    width, height = width_height
 
     if input_control_handle is not None:
 
@@ -33,6 +32,7 @@ def draw_motor_info(input_screen: pygame.Surface, text_font: pygame.font.Font, t
             f'y_axis position: None']
 
     for sentence in sentence_list:
+        text_font = pygame.font.Font(None, text_size)
         text = text_font.render(sentence, True, text_color)
         input_screen.blit(text, (width, height))
         height += step
@@ -121,14 +121,14 @@ class Button:
 
     def event_service(self, event: pygame.event.Event):
         if event.type == pygame.MOUSEMOTION:
-            if self.button_rect.collidepoint(event.pos):
-                self.mouse_motion_callback()
+            self.mouse_motion_callback(self, event)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if self.button_rect.collidepoint(event.pos):
-                self.mouse_button_down_callback()
+            self.mouse_button_down_callback(self, event)
         elif event.type == pygame.MOUSEBUTTONUP:
-            if self.button_rect.collidepoint(event.pos):
-                self.mouse_button_up_callback()
+            pass
+            # self.mouse_button_up_callback(self, event)
+        else:
+            pass
 
 
 class PackedText:
@@ -158,11 +158,73 @@ class PackedText:
 
 
 class ListBox:
-    def __init__(self):
-        pass
+    def __init__(self, left_top: tuple, width_height: tuple, ordinary_color: tuple, selected_color: tuple,
+                 triangle_color: tuple, text_size: int, text_color: int, text_horizon_offset: int,
+                 candidate_list: list, listbox_hint: str, no_candidate_hint: str):
+        self.left_top = left_top
+        self.left, self.top = left_top
+        self.width_height = width_height
+        self.width, self.height = width_height
+        self.ordinary_color = ordinary_color
+        self.selected_color = selected_color
+        self.triangle_color = triangle_color
+        self.text_size = text_size
+        self.text_height = 0.62 * text_size
+        self.text_color = text_color
+        self.text_horizon_offset = text_horizon_offset
+        self.text_vertical_offset = (self.width_height[1] - self.text_height) / 2
+        self.candidate_list = candidate_list
+        self.selected_index = -1
+        self.listbox_hint = listbox_hint
+        self.no_candidate_text = no_candidate_hint
 
-    def set_choice(self):
+        # 回调函数
+        self.listbox_selected_callback = None
+        self.listbox_cancel_selected_callback = None
+        self.listbox_auto_select_callback = None
+
+    def set_selected_index(self, selected_index: int):
+        self.selected_index = selected_index
+
+    def cancel_selected_index(self):
+        self.selected_index = -1
+
+    def update_candidate_list(self, candidate_list: list):
+        self.candidate_list = candidate_list
+
+    def process_event(self, input_event: pygame.event.Event):
         pass
 
     def render(self, input_screen: pygame.surface.Surface):
-        pass
+        text_font = pygame.font.Font(None, self.text_size)
+        listbox_list = [pygame.Rect(self.left_top, self.width_height)]
+
+        if len(self.candidate_list) <= 0:
+            # 绘制listbox
+            for i, listbox_item in enumerate(listbox_list):
+                pygame.draw.rect(input_screen, self.ordinary_color, listbox_item)
+
+            text = text_font.render(self.no_candidate_text, True, self.text_color)
+            input_screen.blit(text, (self.left + self.text_horizon_offset, self.top + self.text_vertical_offset))
+        else:
+            # 创建一个表示listbox的列表
+            listbox = [pygame.Rect((self.left, self.top + self.height * i), self.width_height)
+                       for i in range(len(self.candidate_list))]
+
+            # 绘制listbox
+            for i, listbox_item in enumerate(listbox_list):
+                pygame.draw.rect(input_screen, self.ordinary_color, listbox_item)
+
+            for i, listbox_item in enumerate(listbox):
+                pygame.draw.rect(input_screen, self.ordinary_color, listbox_item)
+                if i == self.selected_index:
+                    # 高亮选中选项
+                    pygame.draw.rect(input_screen, self.selected_color, listbox_item)
+
+            text = text_font.render(self.listbox_hint, True, self.text_color)
+            input_screen.blit(text, (self.left + self.text_horizon_offset, self.top + self.text_vertical_offset))
+
+            for i, comport in enumerate(self.candidate_list):
+                text = text_font.render(comport.device, True, self.text_color)
+                input_screen.blit(text, (self.left + self.text_horizon_offset,
+                                         self.top + self.text_vertical_offset + self.height * i))

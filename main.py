@@ -15,6 +15,8 @@ joystick = None
 state_code = {'quit': -1, 'main_menu': 0, 'joystick_info_window': 1,
               'joystick_control_window': 2, 'auto_control_window': 3}
 
+current_state_code = state_code['main_menu']
+
 num_motor6020 = 1
 num_motor2006 = 3
 
@@ -25,7 +27,7 @@ baud_rate = 600000
 time_out = 0.02
 
 control_handle = None
-serial_port = None
+serial_port: serial.Serial = None
 
 previous_button_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -179,6 +181,8 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
 # 手柄信息监控窗口, state码: 1
 def render_joystick_info_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface,
                                 input_joystick: pygame.joystick.Joystick):
+    global current_state_code
+
     # 注册标题
     title = display_lib.PackedText('Joystick Monitor', 60, (255, 255, 255), (450, 40))
 
@@ -206,13 +210,13 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
         # 处理事件
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
-                return state_code['quit']
+                current_state_code = state_code['quit']
             if event.type == pygame.MOUSEMOTION:
                 button.mouse_motion_callback(button, event)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # 检查鼠标是否在按钮上
                 if button.button_rect.collidepoint(event.pos):
-                    return state_code['main_menu']
+                    current_state_code = state_code['main_menu']
 
         for i, axis_text in enumerate(axis_text_list):
             axis = input_joystick.get_axis(i)
@@ -246,11 +250,16 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
         # 控制更新速率
         pygame.time.Clock().tick(60)
 
+        if current_state_code != state_code['joystick_info_window']:
+            return
+
 
 # 手柄控制窗口, state码: 2
 def render_joystick_control_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface,
                                    input_joystick: pygame.joystick.Joystick):
-    text_font = pygame.font.Font(None, 36)
+
+    global current_state_code
+
     global selected_index
     global is_selecting_com_port
     global control_handle
@@ -264,23 +273,20 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
     global selected_port
     global serial_port
 
-    # 填充背景
-    input_screen.blit(background, (0, 0))
-
     listbox = None
     transform_matrix = None
 
     # 注册标题
-    joystick_control_text = display_lib.PackedText('Joystick Control', 36, (255, 255, 255), (450, 40))
+    joystick_control_text = display_lib.PackedText('Joystick Control', 60, (255, 255, 255), (450, 40))
     joystick_monitor_text = display_lib.PackedText('Joystick Monitor', 36, (255, 255, 255), (60, 120))
     motor_info_text = display_lib.PackedText('Motor Info', 36, (255, 255, 255), (320, 120))
 
-    text_list = [joystick_control_text, joystick_monitor_text, motor_info_text]
-
     # 读取并显示每个轴的状态
+    axis_text_list = []
+    # # # 读取并显示每个轴的状态
     num_axes = input_joystick.get_numaxes()
     for i in range(num_axes):
-        text_list.append(display_lib.PackedText(f'Axis {i}: 0', 48, (0, 255, 255), (100, i * 50 + 200)))
+        axis_text_list.append(display_lib.PackedText(f'Axis {i}: 0', 36, (0, 255, 255), (100, i * 50 + 200)))
 
     # 方便修改窗口位置相关参数
     width = 300
@@ -313,8 +319,30 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
 
     # 注册提示用文字
     serial_port_work_status_text = display_lib.PackedText(' ', 36, (255, 255, 255), (650, 500))
-    num_frames_count_text = display_lib.PackedText('', 28, (255, 255, 255), (950, 610))
-    transform_matrix_text = display_lib.PackedText('Transform Matrix', 28, (128, 0, 255), (650, 300))
+    num_frames_count_text = display_lib.PackedText(' ', 28, (255, 255, 255), (950, 610))
+    transform_matrix_text = display_lib.PackedText(' ', 28, (128, 0, 255), (650, 300))
+
+    # 创建文字列表
+    text_list = [joystick_control_text, joystick_monitor_text, motor_info_text, serial_port_work_status_text,
+                 num_frames_count_text, transform_matrix_text]
+
+    text_list[0] = joystick_control_text
+    text_list[1] = joystick_monitor_text
+    text_list[2] = motor_info_text
+    text_list[3] = serial_port_work_status_text
+    text_list[4] = num_frames_count_text
+    text_list[5] = transform_matrix_text
+
+    # 创建按钮列表
+    button_list = [quit_button, select_com_button, y_axis_zero_button, z_axis_zero_button, pitch_zero_button,
+                   reset_frame_button, save_frame_button]
+    button_list[0] = quit_button
+    button_list[1] = select_com_button
+    button_list[2] = y_axis_zero_button
+    button_list[3] = z_axis_zero_button
+    button_list[4] = pitch_zero_button
+    button_list[5] = reset_frame_button
+    button_list[6] = save_frame_button
 
     # 注册回调函数
     quit_button.mouse_button_down_callback = quit_button_mouse_button_down_event_handler
@@ -325,26 +353,18 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
     reset_frame_button.mouse_button_down_callback = reset_frame_button_mouse_button_down_event_handler
     save_frame_button.mouse_button_down_callback = save_frame_button_mouse_button_down_event_handler
 
-    # 创建按钮列表
-    button_list = [quit_button, select_com_button, y_axis_zero_button, z_axis_zero_button, pitch_zero_button,
-                   reset_frame_button, save_frame_button]
-
     for button in button_list:
         button.mouse_motion_callback = mouse_on_event_handler
+        button.mouse_on_color = (0, 255, 255)
 
     # 运行循环
     while True:
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
-                return -1
-            if event.type == pygame.MOUSEMOTION:
-                for button in button_list:
-                    button.mouse_motion_callback(button, event)
+                current_state_code = state_code['main_menu']
+            for button in button_list:
+                button.event_service(event)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                for button in button_list:
-                    return_code = button.mouse_button_down_callback(button, event)
-                    if return_code != state_code['joystick_control_window']:
-                        return return_code
                 if is_selecting_com_port:
                     # 检查鼠标是否在某个listbox上
                     if listbox is not None:
@@ -359,6 +379,9 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
                                         serial_port = None
                                         selected_port = None
                                         control_handle = None
+
+        # 填充背景
+        input_screen.blit(background, (0, 0))
 
         # 初始化串口
         if selected_port is not None and serial_port is None:
@@ -382,10 +405,13 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
                 transform_matrix = matrix_lib.compute_transform_matrix(
                     [0,
                      ((220 - control_handle.z_axis_position) / 220),
-                     (510 - control_handle.y_axis_position) / 510],  # control_handle.z_axis_position / 220
-                    [0, control_handle.pitch_angle, control_handle.yaw_angle / 22.76])  # control_handle.yaw_angle
+                     (510 - control_handle.y_axis_position) / 510],
+                    [0, control_handle.pitch_angle, control_handle.yaw_angle / 22.76])
 
+                transform_matrix_text.set_text('Transform Matrix')
                 display_lib.draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
+            else:
+                transform_matrix_text.set_text(' ')
 
             state, photo = camera.read()
             cv2.imshow('camera', photo)
@@ -458,14 +484,23 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
                         text = text_font.render(comport.device, True, (255, 255, 255))
                         input_screen.blit(text, (650, 210))
 
+        # 读取手柄摇杆值
+        for i, axis_text in enumerate(axis_text_list):
+            axis = input_joystick.get_axis(i)
+            if i < 4:
+                axis = int(axis * 64)
+            else:
+                axis = int((axis + 1) * 128)
+            axis_text.set_text(f'Axis {i}: {axis:d}')
+
         # 渲染控件
-        if control_handle is not None:
-            # 读取并显示每个电机的状态
-            display_lib.draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
+        display_lib.draw_motor_info(input_screen, 36, text_color, (width, height), step, control_handle)
         for button in button_list:
             button.render(input_screen)
         for text in text_list:
             text.render(input_screen)
+        for packed_text in axis_text_list:
+            packed_text.render(input_screen)
 
         # 刷新屏幕
         pygame.display.flip()
@@ -473,227 +508,19 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
         # 控制更新速率
         pygame.time.Clock().tick(60)
 
+        # 如果状态码不在手柄控制上，则退出循环
+        if current_state_code != state_code['joystick_control_window']:
+            return
+
 
 # 自动控制窗口, state码: 3
 def render_auto_control_window(input_screen: pygame.surface.Surface, background: pygame.surface.Surface):
-    title_font = pygame.font.Font(None, 60)
-    text_font = pygame.font.Font(None, 36)
-    global selected_index
-    global is_selecting_com_port
-    global control_handle
-
-    global frames
-    global num_frames
-
-    global previous_button_state
-
-    # 填充背景
-    input_screen.fill((64, 64, 64))
-    input_screen.blit(background, (0, 0))
-
-    # 设置按钮颜色
-    button_color = (255, 255, 0)
-
-    listbox = None
-
-    # 串口相关实例
-    global selected_port
-    global serial_port
-
-    # #   渲染标题
-    text = title_font.render(f"Automated Control", True, (255, 255, 255))
-    input_screen.blit(text, (450, 40))
-
-    text = text_font.render(f"Motor Info", True, (255, 255, 255))
-    input_screen.blit(text, (320, 120))
-
-    # 方便修改窗口位置相关参数
-    width = 300
-    height = 200
-    step = 30
-    text_color = (0, 255, 0)
-
-    # # 读取并显示每个电机的状态
-    display_lib.draw_motor_info(input_screen, text_font, text_color, (width, height), step, control_handle)
-
-    # 创建一个表示退出按钮的矩形
-    quit_button = pygame.Rect(490, 590, 200, 80)
-    select_com_button = pygame.Rect(900, 200, 180, 40)
-
-    # 创建三个表示归零按钮的矩形
-    y_axis_zero_button = pygame.Rect(940, 300, 180, 40)
-    z_axis_zero_button = pygame.Rect(940, 350, 180, 40)
-    pitch_zero_button = pygame.Rect(940, 400, 180, 40)
-
-    # 创建三个表示归零按钮的矩形
-    reset_frame_button = pygame.Rect(940, 500, 180, 40)
-    save_frame_button = pygame.Rect(940, 550, 180, 40)
-
-    # 绘制上文创建的圆角矩形按钮
-    pygame.draw.rect(input_screen, button_color, select_com_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Select COM Port", True, (0, 0, 0))
-    input_screen.blit(text, (910, 210))
-
-    pygame.draw.rect(input_screen, button_color, y_axis_zero_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Zero Y Axis", True, (0, 0, 0))
-    input_screen.blit(text, (970, 310))
-
-    pygame.draw.rect(input_screen, button_color, z_axis_zero_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Zero Z Axis", True, (0, 0, 0))
-    input_screen.blit(text, (970, 360))
-
-    pygame.draw.rect(input_screen, button_color, pitch_zero_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Zero Pitch", True, (0, 0, 0))
-    input_screen.blit(text, (970, 410))
-
-    pygame.draw.rect(input_screen, button_color, reset_frame_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Reset Frame", True, (0, 0, 0))
-    input_screen.blit(text, (970, 510))
-
-    pygame.draw.rect(input_screen, button_color, save_frame_button, border_radius=10)
-    text_font = pygame.font.Font(None, 28)
-    text = text_font.render(f"Save Frame", True, (0, 0, 0))
-    input_screen.blit(text, (970, 560))
-
-    pygame.draw.rect(input_screen, button_color, quit_button, border_radius=10)
-    text_font = pygame.font.Font(None, 42)
-    text = text_font.render(f"Main Menu", True, (0, 0, 0))
-    input_screen.blit(text, (515, 616))
-
-    # 初始化串口
-    if selected_port is not None and serial_port is None:
-        serial_port = serial.Serial(selected_port.name, baud_rate, timeout=time_out)
-        control_handle = communicate_lib.ControlHandle()
-
-    if selected_port is not None and serial_port is not None:
-        if serial_port.name != selected_port.name:
-            serial_port = serial.Serial(selected_port.name, baud_rate)
-
-        if control_handle is not None:
-            # 绘制状态指示文字
-            text = text_font.render(selected_port.name + " work now", True, (255, 255, 255))
-            input_screen.blit(text, (650, 500))
-
-            text_font = pygame.font.Font(None, 28)
-            text = text_font.render(f"Num frames: {num_frames}", True, (255, 255, 255))
-            input_screen.blit(text, (950, 610))
-
-            text = text_font.render("Transform Matrix", True, (128, 0, 255))
-            input_screen.blit(text, (650, 300))
-
-            transform_matrix = matrix_lib.compute_transform_matrix(
-                [0,
-                 -1,
-                 -2],  # control_handle.z_axis_position / 220
-                [90, control_handle.pitch_angle, control_handle.yaw_angle])  # control_handle.yaw_angle
-
-            display_lib.draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
-
-        state, photo = camera.read()
-        cv2.imshow('camera', photo)
-
-        # # 发送控制数据到MCU
-        if control_handle is not None:
-            control_handle.send_speed_control_command(serial_port)
-
-            control_handle.read_speed_control_report(serial_port, 0)
-
-    # 串口选择界面
-    if is_selecting_com_port:
-        ports_list = list(serial.tools.list_ports.comports())
-
-        # 设置listbox颜色
-        listbox_color = (128, 128, 128)
-
-        text_font = pygame.font.Font(None, 32)
-        default_listbox = [pygame.Rect(650, 200, 250, 30)]
-
-        if len(ports_list) <= 0:
-            # 绘制listbox
-            for i, listbox_item in enumerate(default_listbox):
-                pygame.draw.rect(input_screen, listbox_color, listbox_item)
-
-            text = text_font.render("No serial device!", True, (255, 255, 255))
-            input_screen.blit(text, (650, 210))
-        else:
-            # 创建一个表示listbox的列表
-            listbox = [pygame.Rect(650, 230 + 30 * i, 250, 30) for i in range(len(ports_list))]
-
-            # 绘制listbox
-            for i, listbox_item in enumerate(default_listbox):
-                pygame.draw.rect(input_screen, listbox_color, listbox_item)
-
-            for i, listbox_item in enumerate(listbox):
-                pygame.draw.rect(input_screen, listbox_color, listbox_item)
-                if i == selected_index:
-                    # 高亮选中串口
-                    pygame.draw.rect(input_screen, (0, 0, 250), listbox_item)
-
-            text = text_font.render("Available serial device:", True, (255, 255, 255))
-            input_screen.blit(text, (650, 210))
-
-            for i, comport in enumerate(ports_list):
-                text = text_font.render(comport.device, True, (255, 255, 255))
-                input_screen.blit(text, (650, 240 + 30 * i))
-                if i == selected_index:
-                    selected_port = comport
-
-                    pygame.draw.rect(input_screen, listbox_color, default_listbox[0])
-                    text = text_font.render(comport.device, True, (255, 255, 255))
-                    input_screen.blit(text, (650, 210))
-
-    for event in pygame.event.get():
-        if event.type == pygloc.QUIT:
-            return -1
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            # 检查鼠标是否在按钮上
-            if quit_button.collidepoint(event.pos):
-                return state_code['main_menu']
-            if select_com_button.collidepoint(event.pos):
-                is_selecting_com_port = not is_selecting_com_port
-                return state_code['auto_control_window']
-            if y_axis_zero_button.collidepoint(event.pos):
-                if serial_port is not None:
-                    communicate_lib.send_zero_y_axis_command(serial_port)
-            if z_axis_zero_button.collidepoint(event.pos):
-                if serial_port is not None:
-                    communicate_lib.send_zero_z_axis_command(serial_port)
-            if pitch_zero_button.collidepoint(event.pos):
-                if serial_port is not None:
-                    communicate_lib.send_zero_pitch_command(serial_port)
-            if reset_frame_button.collidepoint(event.pos):
-                frames = []
-                num_frames = 0
-            if save_frame_button.collidepoint(event.pos):
-                io_lib.save_json_file(json_name, camera_angle_x, frames)
-                frames = []
-                num_frames = 0
-            if is_selecting_com_port:
-                # 检查鼠标是否在某个listbox上
-                if listbox is not None:
-                    for i, listbox_item in enumerate(listbox):
-                        if listbox_item.collidepoint(event.pos):
-                            if selected_index != i:
-                                selected_index = i
-                            else:
-                                selected_index = -1
-                                if serial_port is not None:
-                                    serial_port.close()
-                                    serial_port = None
-                                    selected_port = None
-                                    control_handle = None
-
-    # 没有特殊事件，返回本窗口对应的state码
-    return state_code['auto_control_window']
+    pass
 
 
 def main_loop():
     global joystick
+    global current_state_code
 
     # 初始化pygame
     pygame.init()
@@ -713,7 +540,7 @@ def main_loop():
     background = pygame.transform.scale(background, window_size)
     background.set_alpha(255)
 
-    state = 0  # 0:主页面    1:手柄数据监测页面    2:手动控制滑台页面   3:自动控制滑台页面
+    current_state_code = state_code['main_menu']  # 0:主页面    1:手柄数据监测页面    2:手动控制滑台页面   3:自动控制滑台页面
 
     # 游戏循环标志
     running = True
@@ -721,20 +548,20 @@ def main_loop():
     # 游戏循环
     while running:
 
-        if state == state_code['main_menu']:
-            state, joystick = render_main_menu(screen, background)
-            if pygame.joystick.get_count() <= 0 and (state == 1 or state == 2):
-                state = state_code['main_menu']
-        elif state == state_code['joystick_info_window']:
-            state = render_joystick_info_window(screen, background, joystick)
-        elif state == state_code['joystick_control_window']:
-            state = render_joystick_control_window(screen, background, joystick)
-        elif state == state_code['auto_control_window']:
-            state = render_auto_control_window(screen, background)
+        if current_state_code == state_code['main_menu']:
+            current_state_code, joystick = render_main_menu(screen, background)
+            if pygame.joystick.get_count() <= 0 and (current_state_code == 1 or current_state_code == 2):
+                current_state_code = state_code['main_menu']
+        elif current_state_code == state_code['joystick_info_window']:
+            render_joystick_info_window(screen, background, joystick)
+        elif current_state_code == state_code['joystick_control_window']:
+            render_joystick_control_window(screen, background, joystick)
+        elif current_state_code == state_code['auto_control_window']:
+            render_auto_control_window(screen, background)
         else:
             pass
 
-        if state == state_code['quit']:
+        if current_state_code == state_code['quit']:
             running = False
 
     # 退出pygame
@@ -753,6 +580,7 @@ def quit_button_mouse_button_down_event_handler(input_button: display_lib.Button
     global serial_port
     global selected_port
     global control_handle
+    global current_state_code
 
     if input_button.button_rect.collidepoint(input_event.pos):
         selected_index = -1
@@ -761,9 +589,7 @@ def quit_button_mouse_button_down_event_handler(input_button: display_lib.Button
             serial_port = None
             selected_port = None
             control_handle = None
-        return state_code['main_menu']
-    else:
-        return state_code['joystick_control_window']
+        current_state_code = state_code['main_menu']
 
 
 def select_com_button_mouse_button_down_event_handler(input_button: display_lib.Button,
@@ -772,7 +598,6 @@ def select_com_button_mouse_button_down_event_handler(input_button: display_lib.
 
     if input_button.button_rect.collidepoint(input_event.pos):
         is_selecting_com_port = not is_selecting_com_port
-    return state_code['joystick_control_window']
 
 
 def y_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
@@ -780,7 +605,6 @@ def y_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib
     if input_button.button_rect.collidepoint(input_event.pos):
         if serial_port is not None:
             communicate_lib.send_zero_y_axis_command(serial_port)
-    return state_code['joystick_control_window']
 
 
 def z_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
@@ -788,7 +612,6 @@ def z_axis_zero_button_mouse_button_down_event_handler(input_button: display_lib
     if input_button.button_rect.collidepoint(input_event.pos):
         if serial_port is not None:
             communicate_lib.send_zero_z_axis_command(serial_port)
-    return state_code['joystick_control_window']
 
 
 def pitch_zero_button_mouse_button_down_event_handler(input_button: display_lib.Button,
@@ -796,7 +619,6 @@ def pitch_zero_button_mouse_button_down_event_handler(input_button: display_lib.
     if input_button.button_rect.collidepoint(input_event.pos):
         if serial_port is not None:
             communicate_lib.send_zero_pitch_command(serial_port)
-    return state_code['joystick_control_window']
 
 
 def reset_frame_button_mouse_button_down_event_handler(input_button: display_lib.Button,
