@@ -29,8 +29,6 @@ time_out = 0.02
 control_handle = None
 serial_port: serial.Serial = None
 
-previous_button_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
 count = 0
 
 # 数据集相关全局变量
@@ -150,17 +148,9 @@ def render_main_menu(input_screen: pygame.surface.Surface, background: pygame.su
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
                 current_state_code = state_code['quit']
-            if event.type == pygame.MOUSEMOTION:
-                for button in button_list:
-                    button.mouse_motion_callback(button, event)
+            for button in button_list:
+                button.event_service(event)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # 检查鼠标是否在按钮上
-                for button in button_list:
-                    button.mouse_button_down_callback(button, event)
-            if event.type == pygame.MOUSEBUTTONUP:
-                # 检查鼠标是否在按钮上
-                for button in button_list:
-                    button.mouse_button_up_callback(button, event)
                 for i, button in enumerate(joystick_select_buttons):
                     if button.button_rect.collidepoint(event.pos):
                         if i < pygame.joystick.get_count():
@@ -222,12 +212,7 @@ def render_joystick_info_window(input_screen: pygame.surface.Surface, background
         for event in pygame.event.get():
             if event.type == pygloc.QUIT:
                 current_state_code = state_code['quit']
-            elif event.type == pygame.MOUSEMOTION:
-                button.mouse_motion_callback(button, event)
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                button.mouse_button_down_callback(button, event)
-            elif event.type == pygame.MOUSEBUTTONUP:
-                button.mouse_button_up_callback(button, event)
+            button.event_service(event)
 
         for i, axis_text in enumerate(axis_text_list):
             axis = joystick.get_axis(i)
@@ -270,22 +255,20 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
     global current_state_code
 
     global joystick
-
-    global selected_index
-    global is_selecting_com_port
     global control_handle
 
     global frames
     global num_frames
 
-    global previous_button_state
-
     # 串口相关实例
     global selected_port
     global serial_port
+    global selected_index
+    global is_selecting_com_port
 
     listbox = None
     transform_matrix = None
+    previous_button_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     # 注册标题
     joystick_control_text = display_lib.PackedText('Joystick Control', 60, (255, 255, 255), (450, 40))
@@ -405,26 +388,27 @@ def render_joystick_control_window(input_screen: pygame.surface.Surface, backgro
             if serial_port.name != selected_port.name:
                 serial_port = serial.Serial(selected_port.name, baud_rate)
 
-            if control_handle is not None:
-                # 绘制状态指示文字
-                serial_port_work_status_text.set_text(selected_port.name + ' work now')
-                serial_port_work_status_text.render(input_screen)
+        if control_handle is not None:
+            # 绘制状态指示文字
+            serial_port_work_status_text.set_text(selected_port.name + ' work now')
+            serial_port_work_status_text.render(input_screen)
 
-                num_frames_count_text.set_text(f'Num frames: {num_frames}')
-                serial_port_work_status_text.render(input_screen)
+            num_frames_count_text.set_text(f'Num frames: {num_frames}')
+            serial_port_work_status_text.render(input_screen)
 
-                transform_matrix_text.render(input_screen)
+            transform_matrix_text.render(input_screen)
 
-                transform_matrix = matrix_lib.compute_transform_matrix(
-                    [0,
-                     ((220 - control_handle.z_axis_position) / 220),
-                     (510 - control_handle.y_axis_position) / 510],
-                    [0, control_handle.pitch_angle, control_handle.yaw_angle / 22.76])
+            transform_matrix = matrix_lib.compute_transform_matrix(
+                [0,
+                 ((220 - control_handle.z_axis_position) / 220),
+                 (510 - control_handle.y_axis_position) / 510],
+                [0, control_handle.pitch_angle, control_handle.yaw_angle / 22.76])
 
-                transform_matrix_text.set_text('Transform Matrix')
-                display_lib.draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
-            else:
-                transform_matrix_text.set_text(' ')
+            transform_matrix_text.set_text('Transform Matrix')
+            display_lib.draw_matrix(input_screen, transform_matrix, (630, 330), (70, 35))
+        else:
+            transform_matrix_text.set_text(' ')
+            serial_port_work_status_text.set_text(' ')
 
             state, photo = camera.read()
             cv2.imshow('camera', photo)
@@ -535,28 +519,20 @@ def main_loop():
     global joystick
     global current_state_code
 
-    # 初始化pygame
-    pygame.init()
+    current_state_code = state_code['main_menu']  # 0:主页面    1:手柄数据监测页面    2:手动控制滑台页面   3:自动控制滑台页面
+    window_size = (1280, 720)  # 设置窗口大小
+    running = True  # 游戏循环标志
 
-    # 设置窗口大小
-    window_size = (1280, 720)
+    pygame.init()              # 初始化pygame
+    pygame.joystick.init()     # 初始化游戏手柄
 
-    # 创建窗口
-    screen = pygame.display.set_mode(window_size)
+    screen = pygame.display.set_mode(window_size)        # 创建窗口
     pygame.display.set_caption("3D Reconstruction System")
-
-    # 初始化游戏手柄
-    pygame.joystick.init()
 
     # pygame前端变量
     background = pygame.image.load('./data/background.jpg')
     background = pygame.transform.scale(background, window_size)
     background.set_alpha(255)
-
-    current_state_code = state_code['main_menu']  # 0:主页面    1:手柄数据监测页面    2:手动控制滑台页面   3:自动控制滑台页面
-
-    # 游戏循环标志
-    running = True
 
     # 游戏循环
     while running:
