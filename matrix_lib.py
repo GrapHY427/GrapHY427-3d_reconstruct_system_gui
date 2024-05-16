@@ -42,7 +42,7 @@ def compute_transform_matrix(position, euler_angles):
     roll, pitch, yaw = euler_angles
     pitch = np.deg2rad(pitch)
     yaw = np.deg2rad(yaw)
-    return pose_spherical(yaw, pitch, 2.5 * math.hypot(y, z))
+    return pose_spherical(yaw, pitch, 3 * math.hypot(y, z))
 
 
 trans_t = lambda t: np.array([

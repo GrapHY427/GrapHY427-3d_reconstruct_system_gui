@@ -55,7 +55,7 @@ class ControlHandle:
             print("No serial port available!")
             return
         else:
-            raw_data = [-23206, 1, self.z_axis, self.y_axis, self.pitch, self.yaw_pos, self.yaw_neg]
+            raw_data = [-23206, 1, self.z_axis, self.y_axis, self.pitch, self.yaw_pos]
 
             data_to_send = b''
             for value in raw_data:
