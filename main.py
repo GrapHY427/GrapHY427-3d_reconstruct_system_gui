@@ -491,6 +491,7 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
 
     previous_button_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     clear_window_flag = False
+    steady_state = 0
 
     # 注册标题
     joystick_control_text = display_lib.PackedText('Automated Control', 60, (255, 255, 255), (450, 40))
@@ -539,6 +540,9 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
     change_control_mode_button = display_lib.Button(left_top=(940, 110), width_height=(220, 40), color=button_color,
                                                     text='Change control mode', text_size=28, text_color=(0, 0, 0),
                                                     text_horizon_offset=5, border_radius=10)
+    start_auto_sample_button = display_lib.Button(left_top=(150, 600), width_height=(210, 40), color=button_color,
+                                                  text='Start Auto Sampling', text_size=28, text_color=(0, 0, 0),
+                                                  text_horizon_offset=10, border_radius=10)
 
     # 注册提示用文字
     serial_port_work_status_text = display_lib.PackedText(' ', 36, (255, 255, 255), (650, 500))
@@ -560,7 +564,9 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
 
     # 创建按钮列表
     button_list = [quit_button, select_com_button, y_axis_zero_button, z_axis_zero_button, pitch_zero_button,
-                   reset_frame_button, save_frame_button, move_all_to_zero_button, change_control_mode_button]
+                   reset_frame_button, save_frame_button, move_all_to_zero_button, change_control_mode_button,
+                   start_auto_sample_button]
+
     button_list[0] = quit_button
     button_list[1] = select_com_button
     button_list[2] = y_axis_zero_button
@@ -570,6 +576,7 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
     button_list[6] = save_frame_button
     button_list[7] = move_all_to_zero_button
     button_list[8] = change_control_mode_button
+    button_list[9] = start_auto_sample_button
 
     for button in button_list:
         button.mouse_button_up_callback = do_nothing
@@ -588,6 +595,7 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
     save_frame_button.mouse_button_up_callback = save_frame_button_mouse_button_up_event_handler
     move_all_to_zero_button.mouse_button_up_callback = move_all_to_zero_button_mouse_button_up_event_handler
     change_control_mode_button.mouse_button_up_callback = change_control_mode_button_mouse_up_event_handler
+
 
     listbox = display_lib.ListBox(left_top=(675, 200), width_height=(260, 30), ordinary_color=(128, 128, 128),
                                   selected_color=(0, 255, 0), text_size=32, text_color=(255, 255, 255),
@@ -664,13 +672,21 @@ def render_auto_control_window(input_screen: pygame.surface.Surface, background:
                 for index in range(len(previous_button_state)):
                     previous_button_state[index] = joystick.get_button(index)
             else:
+                control_handle.read_speed_control_report(serial_port, 1)
                 if zero_position_flag:
-                    if True and \
+                    if abs(control_handle.yaw_angle) < 20 and \
                             abs(control_handle.y_axis_position) < 2 and \
                             abs(control_handle.z_axis_position) < 2 and \
                             abs(control_handle.pitch_angle) < 2:  # abs(control_handle.yaw_angle) < 4
+                        steady_state += 1
+
+                    if steady_state > 5:
                         zero_position_flag = False
                         joystick_control_flag = True
+                        steady_state = 0
+                # 自动控制模式
+                if auto_control_flag:
+                    pass
 
         else:
             if clear_window_flag:

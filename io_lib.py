@@ -31,3 +31,21 @@ def capture_photo_to_dataset(filepath: str, number: int, photo: np.ndarray):
     photo_format = '.png'
     filename = filepath + str(number) + photo_format
     cv2.imwrite(filename, photo)
+
+
+def add_euler_to_dict(position: tuple, euler_angles: tuple, units: list):
+    unit = {'position': position,
+            'euler_angles': euler_angles, }
+    units.append(unit)
+
+
+def save_position_json_file(filename: str, units: list):
+    dictionary = {"units": units}
+    with open(filename, "w+") as f:
+        json.dump(dictionary, f)
+
+
+def read_position_json_file(filename: str):
+    with open(filename, 'r') as f:
+        dictionary = json.load(f)
+    return dictionary['units']
